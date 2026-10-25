@@ -1,6 +1,6 @@
 'use strict';
 // Incrémenter CACHE à chaque modification des fichiers pour forcer la mise à jour.
-const CACHE = 'checkmmg-v0.3.0';
+const CACHE = 'checkmmg-v0.3.1';
 const FILES = [
   './', './index.html', './style.css', './app.js', './licence.js', './manifest.webmanifest',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',

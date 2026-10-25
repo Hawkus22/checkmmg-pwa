@@ -4,7 +4,7 @@
  * l'appli Messages avec le texte prérempli, l'utilisateur appuie sur « Envoyer »
  * puis confirme ici que c'est fait. */
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 const KEY_PREFS = 'checkmmg.prefs';
 const KEY_HIST = 'checkmmg.history';
 const KEY_PENDING = 'checkmmg.pending';
@@ -865,6 +865,8 @@ function licenceScreen() {
     <div class="card" style="background:${color};color:#fff;border-color:${color}">
       <div style="font-size:18px;font-weight:700">${esc(title)}</div><div>${esc(detail())}</div>
     </div>
+    ${blocked && !(prefs.userName && prefs.mmgName) ? `<div class="banner warn">Avant de demander le code, renseignez votre nom et votre MMG : l’administrateur
+      en a besoin pour vous identifier. <a class="btn light" href="#/config" style="margin-top:8px">⚙️ Renseigner mon nom et ma MMG</a></div>` : ''}
     <div class="card"><h2>Étape 1 — Demander le code</h2>
       <p style="margin:0 0 10px">${pending
         ? 'Une demande est déjà en cours (valable 7 jours). Renvoyez-la si nécessaire ou attendez la réponse.'
@@ -905,8 +907,8 @@ const ROUTES = {
 function route() {
   const key = (location.hash || '#/').replace(/^#\/?/, '');
   if (!prefs.privacyAt && key !== 'privacy') { privacyScreen(true); window.scrollTo(0, 0); return; }
-  // licence non valide : tout est bloqué sauf la politique de confidentialité (les appels d'urgence restent sur l'écran de licence)
-  if (key !== 'privacy' && licBlocked()) { licenceScreen(); window.scrollTo(0, 0); return; }
+  // licence non valide : tout est bloqué sauf la politique de confidentialité et la configuration (nom/MMG à renseigner avant la demande)
+  if (key !== 'privacy' && key !== 'config' && licBlocked()) { licenceScreen(); window.scrollTo(0, 0); return; }
   let screen = ROUTES[key] || home;
   if (vacationActive() && (key === 'open' || key === 'close')) screen = home;
   screen();
