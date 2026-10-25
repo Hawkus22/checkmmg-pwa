@@ -23,9 +23,11 @@ const LIC_CHALLENGE_VALIDITY = 7 * LIC_DAY;
 const LIC_MAX_EXPIRY = 91 * LIC_DAY;           // une expiration plus lointaine est refusée
 const LIC_ROLLBACK_TOLERANCE = 5 * 60 * 1000;  // dérive d'horloge / fuseau tolérée
 const LIC_BLACKLIST_MAX = 50;
+const LIC_TRIAL_DAYS = 6;                      // essai accordé d'office au premier lancement
+const LIC_TRIAL_MS = LIC_TRIAL_DAYS * LIC_DAY;
 const LIC_B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-const LIC_EMPTY = { uuid: '', act: null, counter: 0, challenge: '', challengeTs: 0, lastSeen: 0, used: [] };
+const LIC_EMPTY = { uuid: '', act: null, counter: 0, challenge: '', challengeTs: 0, lastSeen: 0, used: [], trialStart: 0 };
 let lic = { ...LIC_EMPTY };
 let licOk = true;   // false si la signature enregistrée ne se vérifie plus (données modifiées)
 
@@ -33,6 +35,9 @@ function licLoad() {
   try { lic = { ...LIC_EMPTY, ...JSON.parse(localStorage.getItem(LIC_KEY) || '{}') }; }
   catch (_) { lic = { ...LIC_EMPTY }; }
   if (!lic.uuid) { lic.uuid = licUuid(); licSave(); }
+  // Période d'essai : accordée une seule fois, au premier chargement d'une installation jamais activée.
+  // Elle n'est jamais ré-accordée ensuite (installation déjà activée, ou essai déjà consommé).
+  if (!lic.act && !lic.trialStart) { lic.trialStart = Date.now(); licSave(); }
 }
 function licSave() { try { localStorage.setItem(LIC_KEY, JSON.stringify(lic)); } catch (_) { /* ignoré */ } }
 
@@ -78,9 +83,31 @@ async function licInit() {
   } catch (_) { licOk = false; }
 }
 
-/** NOT_ACTIVATED | VALID | WARNING | GRACE | EXPIRED | CLOCK_TAMPERED */
+/** Repère anti-recul d'horloge : n'avance jamais en arrière. */
+function licTouch(now) {
+  if (now > lic.lastSeen) {
+    const stale = now - lic.lastSeen > 60 * 1000;
+    lic.lastSeen = now;
+    if (stale) licSave();
+  }
+}
+
+/** État d'une installation jamais activée : TRIAL pendant 6 jours, puis TRIAL_ENDED (pas de période de grâce). */
+function licTrialState() {
+  if (!lic.trialStart) return 'NOT_ACTIVATED';
+  const now = Date.now();
+  if (lic.lastSeen > 0 && now < lic.lastSeen - LIC_ROLLBACK_TOLERANCE) return 'CLOCK_TAMPERED';
+  if (now >= lic.trialStart + LIC_TRIAL_MS) return 'TRIAL_ENDED';
+  licTouch(now);
+  return 'TRIAL';
+}
+
+/** Jours d'essai restants (arrondi au-dessus : 6 le premier jour, 1 le dernier). */
+const licTrialDays = () => Math.max(0, Math.ceil((lic.trialStart + LIC_TRIAL_MS - Date.now()) / LIC_DAY));
+
+/** NOT_ACTIVATED | TRIAL | TRIAL_ENDED | VALID | WARNING | GRACE | EXPIRED | CLOCK_TAMPERED */
 function licState() {
-  if (!lic.act) return 'NOT_ACTIVATED';
+  if (!lic.act) return licTrialState();
   if (!licOk) return 'EXPIRED';
   const now = Date.now();
   if (lic.lastSeen > 0 && now < lic.lastSeen - LIC_ROLLBACK_TOLERANCE) return 'CLOCK_TAMPERED';
@@ -99,9 +126,12 @@ function licState() {
   return s;
 }
 
-const licBlocked = () => ['NOT_ACTIVATED', 'EXPIRED', 'CLOCK_TAMPERED'].includes(licState());
+const licBlocked = () => ['NOT_ACTIVATED', 'TRIAL_ENDED', 'EXPIRED', 'CLOCK_TAMPERED'].includes(licState());
 const licDaysRemaining = () => (lic.act ? Math.trunc((lic.act.exp - Date.now()) / LIC_DAY) : 0);
-const licExpiryStr = () => (lic.act ? new Date(lic.act.exp).toLocaleDateString('fr-FR') : '—');
+const licExpiryStr = () => {
+  if (lic.act) return new Date(lic.act.exp).toLocaleDateString('fr-FR');
+  return lic.trialStart ? new Date(lic.trialStart + LIC_TRIAL_MS).toLocaleDateString('fr-FR') : '—';
+};
 const licHasPending = () => !!lic.challenge && Date.now() - lic.challengeTs < LIC_CHALLENGE_VALIDITY;
 
 /** Corps du SMS de demande ; réutilise le challenge en cours s'il a moins de 7 jours. */

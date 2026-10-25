@@ -4,7 +4,7 @@
  * l'appli Messages avec le texte prérempli, l'utilisateur appuie sur « Envoyer »
  * puis confirme ici que c'est fait. */
 
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.4.0';
 const KEY_PREFS = 'checkmmg.prefs';
 const KEY_HIST = 'checkmmg.history';
 const KEY_PENDING = 'checkmmg.pending';
@@ -271,6 +271,7 @@ function home() {
     ${!isConfigured() ? '<div class="banner warn">Configurez votre nom et votre MMG avant le premier envoi.</div>' : ''}
     ${(() => {
       const s = licState();
+      if (s === 'TRIAL') return `<a class="banner btn" style="display:block;min-height:0;text-align:left;background:#0D47A1" href="#/licence">🎁 Période d’essai : ${licTrialDays()} jour(s) restant(s) — Toucher pour activer la licence</a>`;
       if (s === 'WARNING') return `<a class="banner btn" style="display:block;min-height:0;text-align:left;background:#E65100" href="#/licence">⚠️ Licence expire dans ${licDaysRemaining()} jour(s) — Toucher pour renouveler</a>`;
       if (s === 'GRACE') return `<a class="banner btn" style="display:block;min-height:0;text-align:left;background:#B71C1C" href="#/licence">🚨 Licence expirée — période de grâce : ${7 + licDaysRemaining()} jour(s) — Toucher pour renouveler</a>`;
       return '';
@@ -805,7 +806,7 @@ CheckMMG n’a aucun compte, aucun cookie de suivi, aucune publicité et aucun s
 2. Données stockées dans votre téléphone
 • Configuration : nom d’utilisateur, nom de la MMG, numéro destinataire des SMS, numéros d’urgence (astreinte/veille), horaires officiels, mode vacances, jours travaillés.
 • Historique des gardes : pour chaque ouverture/fermeture — date, heure, nom de la MMG, utilisateur, écart avec l’horaire officiel, nombre de patients et observations (fermeture), contenu du SMS, statut d’envoi.
-• Licence : un identifiant d’installation généré au hasard (sans lien avec votre téléphone ou votre identité), la date d’expiration, un compteur de renouvellement et le code reçu de l’administrateur.
+• Licence : un identifiant d’installation généré au hasard (sans lien avec votre téléphone ou votre identité), la date de début de la période d’essai de 6 jours, la date d’expiration, un compteur de renouvellement et le code reçu de l’administrateur.
 • Acceptation de cette politique : date et heure, conservées dans l’historique.
 
 3. Ce que fait CheckMMG avec ces données
@@ -846,6 +847,8 @@ function privacyScreen(consent) {
 /* ---------- licence ---------- */
 
 const LIC_VIEW = {
+  TRIAL: ['#0D47A1', '🎁 Période d’essai', () => `Essai gratuit jusqu’au ${licExpiryStr()} — ${licTrialDays()} jour(s) restant(s). Activez la licence avant la fin pour continuer.`],
+  TRIAL_ENDED: ['#37474F', '⏳ Période d’essai terminée', () => `L’essai a pris fin le ${licExpiryStr()}. Demandez la licence à l’administrateur pour continuer.`],
   VALID: ['#1B5E20', '✅ Licence active', () => `Expire le ${licExpiryStr()} (${licDaysRemaining()} jours)`],
   WARNING: ['#E65100', '⚠️ Licence expire bientôt', () => `Expire le ${licExpiryStr()} — ${licDaysRemaining()} jours restants`],
   GRACE: ['#B71C1C', '🚨 Licence expirée — période de grâce', () => `Expirée le ${licExpiryStr()} — ${7 + licDaysRemaining()} jour(s) de grâce restants`],
