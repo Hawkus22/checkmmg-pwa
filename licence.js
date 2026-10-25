@@ -134,14 +134,29 @@ const licExpiryStr = () => {
 };
 const licHasPending = () => !!lic.challenge && Date.now() - lic.challengeTs < LIC_CHALLENGE_VALIDITY;
 
+/**
+ * Champ CONTACT : « MMG / Prénom NOM / CHK » (même règle que LicenseContact.java sur Android). Il dit à l'administrateur
+ * qui détient quelle licence ; il n'entre dans aucun calcul (le protocole et le nombre de champs ne changent pas).
+ */
+function licContact(mmgName, userName) {
+  const clean = (s) => String(s || '').replace(/[|/]/g, '-').replace(/\s+/g, ' ').trim();
+  let mmg = clean(mmgName) || 'MMG';
+  if (mmg.length > 30) mmg = mmg.slice(0, 30).trim();
+  const tag = 'CHK';
+  let person = clean(userName);
+  const room = Math.max(0, 80 - mmg.length - 6 - tag.length);
+  if (person.length > room) person = person.slice(0, room).trim();
+  return `${mmg} / ${person} / ${tag}`;
+}
+
 /** Corps du SMS de demande ; réutilise le challenge en cours s'il a moins de 7 jours. */
-function licRequestBody(mmgName) {
+function licRequestBody(mmgName, userName) {
   if (!licHasPending()) {
     lic.challenge = licChallenge();
     lic.challengeTs = Date.now();
     licSave();
   }
-  const contact = (mmgName || '').trim().replace(/\|/g, '-') || 'MMG';
+  const contact = licContact(mmgName, userName);
   return ['CMMG', lic.uuid, contact, lic.challenge, lic.challengeTs, LIC_PROTO_VER, lic.counter].join('|');
 }
 

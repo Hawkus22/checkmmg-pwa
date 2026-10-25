@@ -4,7 +4,7 @@
  * l'appli Messages avec le texte prérempli, l'utilisateur appuie sur « Envoyer »
  * puis confirme ici que c'est fait. */
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.5.0';
 const KEY_PREFS = 'checkmmg.prefs';
 const KEY_HIST = 'checkmmg.history';
 const KEY_PENDING = 'checkmmg.pending';
@@ -812,7 +812,7 @@ CheckMMG n’a aucun compte, aucun cookie de suivi, aucune publicité et aucun s
 3. Ce que fait CheckMMG avec ces données
 • SMS Ouverture/Fermeture : CheckMMG ouvre l’application Messages de votre téléphone avec le texte prêt, à destination du numéro configuré. C’est vous qui appuyez sur « Envoyer » ; le SMS passe par votre opérateur.
 • Appels rapides : les boutons Astreinte/Veille ouvrent le composeur de votre téléphone.
-• Licence : à votre demande, CheckMMG ouvre Messages avec un texte prérempli (identifiant d’installation + nom de la MMG) à destination de l’administrateur ; c’est vous qui appuyez sur « Envoyer ». Il répond par SMS avec un code que vous collez dans l’application.
+• Licence : à votre demande, CheckMMG ouvre Messages avec un texte prérempli (identifiant d’installation, nom de la MMG et votre nom) à destination de l’administrateur ; c’est vous qui appuyez sur « Envoyer ». Il répond par SMS avec un code que vous collez dans l’application.
 • Rappels : le fichier calendrier est créé sur votre téléphone ; c’est vous qui l’ajoutez à votre agenda.
 • Export CSV/PDF : générés sur votre téléphone, partagés uniquement si vous choisissez une destination.
 
@@ -886,7 +886,7 @@ function licenceScreen() {
     <p class="hint" style="text-align:center">ID installation : ${esc(lic.uuid)}</p>`;
 
   $('#licReq').addEventListener('click', () => {
-    location.href = smsUrl(LIC_ADMIN_PHONE, licRequestBody(prefs.mmgName));
+    location.href = smsUrl(LIC_ADMIN_PHONE, licRequestBody(prefs.mmgName, prefs.userName));
     toast('Validez l’envoi dans Messages, puis attendez le code.');
   });
   $('#licOk').addEventListener('click', async () => {
